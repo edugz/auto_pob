@@ -66,15 +66,15 @@ The script is designed to fit into the **night audit routine**:
 
 ---
 
-## 🖥️ Author
-
-**Eduardo González**  
-POB Automation Project Lead<br>
-Pacific Fern
-
----
-
 ## 📂 Future Improvements
 
 - GUI version for non-technical users
 - Intelligent error handling: if required fields like the guest’s document number are missing, the script will halt and return a clear error message including the line number and full guest entry, making it easier to identify and fix data issues before uploading to POB
+
+---
+
+## 🖥️ Author
+
+**Eduardo González**  
+POB Automation Project Lead<br>
+@ Pacific Fern
