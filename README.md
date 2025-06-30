@@ -66,10 +66,10 @@ The script is designed to fit into the **night audit routine**:
 
 ---
 
-## 👨‍💻 Author
+## 🖥️ Author
 
 **Eduardo González**  
-POB Automation Project Lead
+POB Automation Project Lead<br>
 Pacific Fern
 
 ---
