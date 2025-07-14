@@ -74,8 +74,8 @@ def main():
     try:
         tree = ET.parse(xml_file)
         root = tree.getroot()
-    except ET.ParseError:
-        print("The XML file could not be parsed")
+    except ET.ParseError as e:
+        print(f"The XML file could not be parsed {e}")
         sys.exit(1)
 
 

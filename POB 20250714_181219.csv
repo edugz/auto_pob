@@ -1,0 +1,5 @@
+documento,idpaisdocumento,tipodocumento,apellido1,apellido2,nombre1,nombre2,sexo,idpaisnacionalidad,idpaisresidencia,fechaNacimiento,fechaEntrada,fechaSalida,habitacion
+53407299,AR,P,Graña,Nocetti,Facundo,Agustín,M,AR,AR,21-02-99,14-07-25,21-07-25,0201
+JP101010,JP,P,Hayashi,,Kohko,,F,JP,JP,06-07-00,14-07-25,23-07-25,0204
+51459981,UY,CI,Gonzalez,,Eduardo,Donato,M,UY,UY,06-07-00,14-07-25,23-07-25,0204
+57643211,UY,CI,Baldovino,,Bruno,,M,UY,UY,21-02-99,14-07-25,28-07-25,209
