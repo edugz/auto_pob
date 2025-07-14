@@ -2,6 +2,7 @@ import sys
 import os
 import xml.etree.ElementTree as ET
 import csv
+import datetime
 
 # Constants
 REQUIRED_FIELDS = [
@@ -58,18 +59,18 @@ def extract_guest_data(guest, nationality_code, index):
 
 # Main script logic
 def main():
-# --- Step 1: Get the filename ---
+    # --- Step 1: Get the filename ---
     if len(sys.argv) < 2:
         print('Usage: python script.py file.xml')
         sys.exit(1)
 
-# --- Step 2: Check if the file exists ---
+    # --- Step 2: Check if the file exists ---
     xml_file = sys.argv[1]
     if not os.path.exists(xml_file):
         print(f'File "{xml_file}" not found')
         sys.exit(1)
 
-# --- Step 3: Parse the XML ---
+    # --- Step 3: Parse the XML ---
     try:
         tree = ET.parse(xml_file)
         root = tree.getroot()
@@ -78,7 +79,7 @@ def main():
         sys.exit(1)
 
 
-# --- Step 4: Process each guest entry ---
+    # --- Step 4: Process each guest entry ---
     valid_rows = []
     errors = []
     entry_index = 1
@@ -93,18 +94,19 @@ def main():
                 errors.append(error)
             entry_index += 1
 
-# --- Step 5: Output
-    base_name = os.path.splitext(xml_file)[0]
-    
+    # --- Step 5: Output
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+
     if errors:
-        log_file = base_name + ".log"
+        log_file = f"POB Error Log {timestamp}.log"
         with open(log_file, "w", encoding="utf-8") as log:
-            log.write("Errors found in POB data:\n\n")
+            log.write(f"Errors found in POB data on {timestamp}\n\n")
             for err in errors:
                 log.write(f"- {err}\n")
         print(f"Export failed. Errors written to: {log_file}")
     else:
-        csv_file = base_name + ".csv"
+        csv_file = f"POB {timestamp}.csv"
         with open(csv_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(FIELD_ORDER)
