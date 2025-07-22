@@ -1,0 +1,17 @@
+Errors found in POB data on 2025-07-22_12-27-19
+
+- Entry #1: , Facundo —
+Missing required field: apellido1;
+
+- Entry #2: Hayashi, Kohko —
+Missing required field: fechaNacimiento;
+
+- Entry #3: Gonzalez, —
+Missing required field: documento;
+Missing required field: tipodocumento;
+Missing required field: nombre1;
+
+- Entry #4: Baldovino, Bruno —
+Missing required field: fechaNacimiento;
+Missing required field: habitacion;
+
