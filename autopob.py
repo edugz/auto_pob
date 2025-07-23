@@ -5,6 +5,87 @@ import csv
 import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import socket
+import json
+import base64
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
+
+# License Validation
+def validate_license():
+    license_path = "license.lic"
+    public_key_path = "public_key.pem"
+
+    if not os.path.exists(license_path):
+        messagebox.showerror("License Error", "License file not found.")
+        return False
+    if not os.path.exists(public_key_path):
+        messagebox.showerror("License Error", "Public key file not found.")
+        return False
+
+    try:
+        # Load license JSON
+        with open(license_path, "r", encoding="utf-8") as f:
+            license_data = json.load(f)
+    except Exception as e:
+        messagebox.showerror("License Error", f"Failed to read license file:\n{e}")
+        return False
+
+    try:
+        # Load public key
+        with open(public_key_path, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+    except Exception as e:
+        messagebox.showerror("License Error", f"Failed to load public key:\n{e}")
+        return False
+
+    # Extract license info and signature
+    license_info = license_data.get("license")
+    signature_b64 = license_data.get("signature")
+
+    if not license_info or not signature_b64:
+        messagebox.showerror("License Error", "License file is missing required fields.")
+        return False
+
+    # Prepare data for verification
+    license_json = json.dumps(license_info, separators=(',', ':')).encode('utf-8')
+    signature = base64.b64decode(signature_b64)
+
+    # Verify signature
+    try:
+        public_key.verify(
+            signature,
+            license_json,
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+    except InvalidSignature:
+        messagebox.showerror("License Error", "Invalid license signature.")
+        return False
+    except Exception as e:
+        messagebox.showerror("License Error", f"Signature verification failed:\n{e}")
+        return False
+
+    # Check machine binding
+    current_machine = socket.gethostname()
+    if license_info.get("machine_id") != current_machine:
+        messagebox.showerror("License Error", "License is not valid for this machine.")
+        return False
+
+    # Check expiration date
+    try:
+        expiry_str = license_info.get("expires")
+        expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d").date()
+        if expiry_date < datetime.date.today():
+            messagebox.showerror("License Error", f"License expired on {expiry_str}.")
+            return False
+    except Exception as e:
+        messagebox.showerror("License Error", f"Invalid expiration date in license:\n{e}")
+        return False
+
+    # If all checks pass
+    return True
 
 # Constants
 REQUIRED_FIELDS = [
@@ -77,6 +158,9 @@ def get_output_folder():
 
 # Main script logic
 def main():
+    if not validate_license():
+        return  # Exit early if license is invalid
+
     root = tk.Tk()
     root.withdraw()
 

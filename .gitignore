@@ -1,2 +1,19 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+*.exe
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# License and sensitive keys
+private_key.pem
+license.lic
+generate_license.py
+generate_keys.py
