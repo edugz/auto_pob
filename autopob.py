@@ -196,12 +196,19 @@ def main():
     for g_nationality in root.findall(".//G_NATIONALITY"):
         nationality_code = g_nationality.findtext("NATIONALITY", "").strip()
         for guest in g_nationality.findall(".//G_FIRST"):
+            resv_status = guest.findtext("RESV_STATUS", "").strip().upper()
+            if resv_status != "CKIN":
+                # Skip guests who didn't check in (e.g., "RS")
+                continue
+
             row, error = extract_guest_data(guest, nationality_code, entry_index)
             if row:
                 valid_rows.append(row)
-            else:
+            elif error:
                 errors.append(error)
             entry_index += 1
+
+
 
     # --- Step 5: Export
     now = datetime.datetime.now()
