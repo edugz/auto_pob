@@ -12,10 +12,18 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
+# Get Public Key
+def get_resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller bundled """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 # License Validation
 def validate_license():
     license_path = "license.lic"
-    public_key_path = "public_key.pem"
+
+    public_key_path = get_resource_path("public_key.pem")
 
     if not os.path.exists(license_path):
         messagebox.showerror("License Error", "License file not found.")
