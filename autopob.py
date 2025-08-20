@@ -108,13 +108,31 @@ FIELD_ORDER = [
     "fechaNacimiento", "fechaEntrada", "fechaSalida", "habitacion"
 ]
 
+MERCOSUR_ID_COUNTRIES = {"AR", "BO", "BR", "CL", "CO", "EC", "PY", "PE"}
+
 CONFIG_FILENAME = "output_path.cfg"
 
 # Function to extract guest info and validate
 def extract_guest_data(guest, nationality_code, index):
     q_id = guest.find(".//Q_ID")
     raw_tipo = q_id.findtext("ID_TYPE", "").strip() if q_id is not None else ""
-    mapped_tipo_id = {"3": "CI", "5": "P"}.get(raw_tipo)
+    doc_number = q_id.findtext("ID_NUMBER", "").strip() if q_id is not None else ""
+    
+    mapped_tipo_id = None
+    if raw_tipo == "3":
+        mapped_tipo_id = "CI"  # Uruguayan National ID
+    elif raw_tipo == "5":
+        normalized_doc = doc_number.replace(".", "").replace("-", "").upper()
+        if nationality_code in MERCOSUR_ID_COUNTRIES:
+            # Passport check: letters + digits, length >= 8
+            if any(c.isalpha() for c in normalized_doc) and any(c.isdigit() for c in normalized_doc) and len(normalized_doc) >= 6:
+                mapped_tipo_id = "PA"  # Passport
+            else:
+                mapped_tipo_id = "OTR"  # Default to Otros
+        else:
+            mapped_tipo_id = "PA"  # Default: Passport
+    else:
+        mapped_tipo_id = None  # Invalid
 
     data = {
         "documento": q_id.findtext("ID_NUMBER", "").strip() if q_id is not None else "",
