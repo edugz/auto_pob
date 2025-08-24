@@ -200,6 +200,12 @@ def ask_all_or_select():
 
     popup = tk.Toplevel()
     popup.title("Conversion Mode")
+
+    def on_close():
+        result["choice"] = None
+        popup.destroy()
+    popup.protocol("WM_DELETE_WINDOW", on_close)
+
     tk.Label(popup, text="Choose conversion mode:").pack(padx=20, pady=10)
 
     button_frame = tk.Frame(popup)
@@ -207,6 +213,16 @@ def ask_all_or_select():
 
     tk.Button(button_frame, text="All", width=10, command=choose_all).pack(side="left", padx=5)
     tk.Button(button_frame, text="Select Rooms", width=15, command=choose_select).pack(side="left", padx=5)
+
+    # --- Center the popup on screen ---
+    popup.update_idletasks()
+    w = popup.winfo_width()
+    h = popup.winfo_height()
+    ws = popup.winfo_screenwidth()
+    hs = popup.winfo_screenheight()
+    x = (ws // 2) - (w // 2)
+    y = (hs // 2) - (h // 2)
+    popup.geometry(f'{w}x{h}+{x}+{y}')
 
     popup.grab_set()  # Make it modal
     popup.wait_window()
@@ -223,6 +239,11 @@ def main():
 
     # --- Step 0: Select conversion mode ---
     mode = ask_all_or_select()
+
+    if mode is None:
+        # User closed the window
+        messagebox.showinfo("Cancelled", "Operation cancelled by user.")
+        return
 
     selected_rooms = None
     if mode == "select":
