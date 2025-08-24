@@ -22,7 +22,6 @@ def get_resource_path(relative_path):
 # License Validation
 def validate_license():
     license_path = "license.lic"
-
     public_key_path = get_resource_path("public_key.pem")
 
     if not os.path.exists(license_path):
@@ -32,16 +31,16 @@ def validate_license():
         messagebox.showerror("License Error", "Public key file not found.")
         return False
 
-    try:
         # Load license JSON
+    try:
         with open(license_path, "r", encoding="utf-8") as f:
             license_data = json.load(f)
     except Exception as e:
         messagebox.showerror("License Error", f"Failed to read license file:\n{e}")
         return False
-
-    try:
+        
         # Load public key
+    try:
         with open(public_key_path, "rb") as f:
             public_key = serialization.load_pem_public_key(f.read())
     except Exception as e:
@@ -75,11 +74,15 @@ def validate_license():
         messagebox.showerror("License Error", f"Signature verification failed:\n{e}")
         return False
 
+    # === Beta check ===
+    is_beta = bool(license_info.get("beta", False))
+
     # Check machine binding
-    current_machine = socket.gethostname()
-    if license_info.get("machine_id") != current_machine:
-        messagebox.showerror("License Error", "License is not valid for this machine.")
-        return False
+    if not is_beta:
+        current_machine = socket.gethostname()
+        if license_info.get("machine_id", "").lower() != current_machine.lower():
+            messagebox.showerror("License Error", "License is bound to another machine. Please request a new license.")
+            return False
 
     # Check expiration date
     try:
