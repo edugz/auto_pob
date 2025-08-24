@@ -5,6 +5,7 @@ import csv
 import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import tkinter.simpledialog as simpledialog
 import socket
 import json
 import base64
@@ -169,7 +170,7 @@ def extract_guest_data(guest, nationality_code, index):
 
     return [data[field] for field in FIELD_ORDER], None
 
-# Read or Prompy for output folder
+# Read or Prompt for output folder
 def get_output_folder():
     if os.path.exists(CONFIG_FILENAME):
         with open(CONFIG_FILENAME, "r", encoding="utf-8") as f:
@@ -185,6 +186,33 @@ def get_output_folder():
 
     return None
 
+# Mode Selector
+def ask_all_or_select():
+    result = {"choice": None}
+
+    def choose_all():
+        result["choice"] = "all"
+        popup.destroy()
+
+    def choose_select():
+        result["choice"] = "select"
+        popup.destroy()
+
+    popup = tk.Toplevel()
+    popup.title("Conversion Mode")
+    tk.Label(popup, text="Choose conversion mode:").pack(padx=20, pady=10)
+
+    button_frame = tk.Frame(popup)
+    button_frame.pack(pady=10)
+
+    tk.Button(button_frame, text="All", width=10, command=choose_all).pack(side="left", padx=5)
+    tk.Button(button_frame, text="Select Rooms", width=15, command=choose_select).pack(side="left", padx=5)
+
+    popup.grab_set()  # Make it modal
+    popup.wait_window()
+
+    return result["choice"]
+
 # Main script logic
 def main():
     if not validate_license():
@@ -192,6 +220,33 @@ def main():
 
     root = tk.Tk()
     root.withdraw()
+
+    # --- Step 0: Select conversion mode ---
+    mode = ask_all_or_select()
+
+    selected_rooms = None
+    if mode == "select":
+        rooms_input = tk.simpledialog.askstring(
+            "Select Rooms", 
+            "Enter room numbers separated by commas (e.g., 101,102):"
+        )
+        if not rooms_input or not rooms_input.strip():
+            messagebox.showwarning("No Rooms selected", "No valid rooms were entered. Operation cancelled.")
+            return
+        
+        selected_rooms = []
+        invalid_rooms = []
+
+        for r in rooms_input.split(","):
+            r = r.strip()
+            if not r.isdigit() or len(r) != 3:
+                invalid_rooms.append(r)
+            else:
+                selected_rooms.append("0" + r)
+
+        if not selected_rooms or invalid_rooms:
+            messagebox.showwarning("Invalid Rooms", f"The following room numbers are invalid:\n{', '.join(invalid_rooms)}\nOperation cancelled.")
+            return
 
     # --- Step 1: Ask for XML file ---
     xml_file = filedialog.askopenfilename(
@@ -227,11 +282,18 @@ def main():
         for guest in g_nationality.findall(".//G_FIRST"):
             resv_status = guest.findtext("RESV_STATUS", "").strip().upper()
             if resv_status != "CKIN":
-                # Skip guests who didn't check in (e.g., "RS")
                 continue
+
+
+            room_number = guest.findtext("ROOM", "").strip()
+            if selected_rooms is not None and room_number not in selected_rooms:
+                continue
+
 
             row, error = extract_guest_data(guest, nationality_code, entry_index)
             if row:
+                room_index = FIELD_ORDER.index("habitacion")
+                row[room_index] = row[room_index].lstrip("0")
                 valid_rows.append(row)
             elif error:
                 errors.append(error)
