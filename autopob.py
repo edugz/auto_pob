@@ -112,11 +112,35 @@ FIELD_ORDER = [
     "fechaNacimiento", "fechaEntrada", "fechaSalida", "habitacion"
 ]
 
-MERCOSUR_ID_COUNTRIES = {"AR", "BO", "BR", "CL", "CO", "EC", "PY", "PE"}
+MERCOSUR_ID_COUNTRIES = {
+    "AR", "BO", "BR", "CL", "CO", "EC", "PY", "PE"
+}
 
 CONFIG_FILENAME = "output_path.cfg"
 
-# Function to extract guest info and validate
+# Normalize year values from xml
+def normalize_date(date_str, is_birth=False):
+    """Convert dd-mm-yy into dd-mm-yyyy according to rules."""
+    if not date_str or len(date_str) < 8:
+        return date_str  # leave untouched if empty/invalid
+
+    try:
+        day, month, year2 = date_str.split("-")
+        yy = int(year2)
+
+        if is_birth:
+            if yy <= 26:
+                yyyy = f"20{yy:02d}"
+            else:
+                yyyy = f"19{yy:02d}"
+        else:
+            yyyy = f"20{yy:02d}"
+
+        return f"{day}-{month}-{yyyy}"
+    except Exception:
+        return date_str  # fallback
+
+# Extract guest info and validate
 def extract_guest_data(guest, nationality_code, index):
     q_id = guest.find(".//Q_ID")
     raw_tipo = q_id.findtext("ID_TYPE", "").strip() if q_id is not None else ""
@@ -149,9 +173,9 @@ def extract_guest_data(guest, nationality_code, index):
         "sexo": guest.findtext("GENDER", "").strip(),
         "idpaisnacionalidad": nationality_code,
         "idpaisresidencia": guest.findtext("GUEST_COUNTRY", "").strip(),
-        "fechaNacimiento": guest.findtext("BIRTH_DATE", "").strip(),
-        "fechaEntrada": guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip(),
-        "fechaSalida": guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "").strip(),
+        "fechaNacimiento": normalize_date(guest.findtext("BIRTH_DATE", "").strip(), is_birth=True),
+        "fechaEntrada": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip()),
+        "fechaSalida": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "").strip()),
         "habitacion": guest.findtext("ROOM", "").strip(),
     }
 
@@ -344,8 +368,7 @@ def main():
             csv_filename = f"POB {timestamp}.csv"
             csv_path = os.path.join(output_folder, csv_filename)
             with open(csv_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(FIELD_ORDER)
+                writer = csv.writer(f, delimiter=";")
                 writer.writerows(valid_rows)
             messagebox.showinfo("Success", f"CSV export complete:\n{csv_path}")
 
