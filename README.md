@@ -6,8 +6,8 @@ More info coming soon.
 
 ## 🖥️ Author
 
-**Eduardo González**  
-POB Automation Project Lead<br>
+**Eduardo González**
+<br>
 @ Pacific Fern
 
 ---
