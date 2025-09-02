@@ -172,7 +172,7 @@ def extract_guest_data(guest, nationality_code, index):
         "nombre2": guest.findtext("ALTERNATE_FIRST_NAME", "").strip(),
         "sexo": guest.findtext("GENDER", "").strip(),
         "idpaisnacionalidad": nationality_code,
-        "idpaisresidencia": guest.findtext("GUEST_COUNTRY", "").strip(),
+        "idpaisresidencia": nationality_code,
         "fechaNacimiento": normalize_date(guest.findtext("BIRTH_DATE", "").strip(), is_birth=True),
         "fechaEntrada": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip()),
         "fechaSalida": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "").strip()),
@@ -190,7 +190,8 @@ def extract_guest_data(guest, nationality_code, index):
 
     if errors:
         guest_name = f"{data.get('apellido1', '')}, {data.get('nombre1', '')}".strip()
-        return None, f"Entry #{index}: {guest_name or '[unknown name]'} — " + "; ".join(errors)
+        room_number = data.get("habitacion", "N/A")        
+        return None, f"Entry #{index}, Room {room_number}: {guest_name or '[unknown name]'} — " + "; ".join(errors)
 
     return [data[field] for field in FIELD_ORDER], None
 
