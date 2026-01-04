@@ -19,8 +19,7 @@ from cryptography.exceptions import InvalidSignature
 # PyInstaller-safe resource path
 # ===============================
 def get_resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and PyInstaller """
-    if hasattr(sys, '_MEIPASS'):
+    if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
@@ -32,6 +31,7 @@ def get_app_path(filename):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(os.path.dirname(sys.executable), filename)
     return os.path.join(os.path.abspath("."), filename)
+
 
 def validate_license():
     license_path = get_app_path("license.lic")
@@ -45,7 +45,6 @@ def validate_license():
         messagebox.showerror("License Error", "Public key file not found.")
         return False
 
-    # Load license file
     try:
         with open(license_path, "r", encoding="utf-8") as f:
             license_data = json.load(f)
@@ -53,7 +52,6 @@ def validate_license():
         messagebox.showerror("License Error", f"Failed to read license file:\n{e}")
         return False
 
-    # Load public key
     try:
         with open(public_key_path, "rb") as f:
             public_key = serialization.load_pem_public_key(f.read())
@@ -68,10 +66,9 @@ def validate_license():
         messagebox.showerror("License Error", "License file is missing required fields.")
         return False
 
-    # Rebuild signed payload
     license_json = json.dumps(
         license_info,
-        separators=(',', ':')
+        separators=(",", ":")
     ).encode("utf-8")
 
     try:
@@ -80,7 +77,6 @@ def validate_license():
         messagebox.showerror("License Error", "Invalid signature encoding.")
         return False
 
-    # Verify cryptographic signature
     try:
         public_key.verify(
             signature,
@@ -95,34 +91,25 @@ def validate_license():
         messagebox.showerror("License Error", f"Signature verification failed:\n{e}")
         return False
 
-    # ===============================
-    # License rules
-    # ===============================
-
-    # Beta check (FIXED)
     is_beta = license_info.get("type") == "BETA"
 
-    # Machine binding (non-beta only)
     if not is_beta:
-        current_machine = socket.gethostname()
-        if license_info.get("machine_id", "").lower() != current_machine.lower():
+        if license_info.get("machine_id", "").lower() != socket.gethostname().lower():
             messagebox.showerror(
                 "License Error",
                 "License is bound to another machine.\nPlease request a new license."
             )
             return False
 
-    # Expiration check
     try:
-        expiry_str = license_info.get("expires")
         expiry_date = datetime.datetime.strptime(
-            expiry_str, "%Y-%m-%d"
+            license_info.get("expires"), "%Y-%m-%d"
         ).date()
 
         if expiry_date < datetime.date.today():
             messagebox.showerror(
                 "License Error",
-                f"License expired on {expiry_str}."
+                f"License expired on {license_info.get('expires')}."
             )
             return False
     except Exception as e:
@@ -150,10 +137,7 @@ FIELD_ORDER = [
     "fechaNacimiento", "fechaEntrada", "fechaSalida", "habitacion"
 ]
 
-MERCOSUR_ID_COUNTRIES = {
-    "AR", "BO", "BR", "CL", "CO", "EC", "PY", "PE"
-}
-
+MERCOSUR_ID_COUNTRIES = {"AR", "BO", "BR", "CL", "CO", "EC", "PY", "PE"}
 CONFIG_FILENAME = "output_path.cfg"
 
 
@@ -168,11 +152,7 @@ def normalize_date(date_str, is_birth=False):
         day, month, year2 = date_str.split("-")
         yy = int(year2)
 
-        if is_birth:
-            yyyy = f"20{yy:02d}" if yy <= 26 else f"19{yy:02d}"
-        else:
-            yyyy = f"20{yy:02d}"
-
+        yyyy = f"20{yy:02d}" if (not is_birth or yy <= 26) else f"19{yy:02d}"
         return f"{day}-{month}-{yyyy}"
     except Exception:
         return date_str
@@ -190,10 +170,7 @@ def extract_guest_data(guest, nationality_code, index):
     elif raw_tipo == "5":
         normalized_doc = doc_number.replace(".", "").replace("-", "").upper()
         if nationality_code in MERCOSUR_ID_COUNTRIES:
-            if any(c.isalpha() for c in normalized_doc) and any(c.isdigit() for c in normalized_doc):
-                mapped_tipo_id = "PA"
-            else:
-                mapped_tipo_id = "OTR"
+            mapped_tipo_id = "PA" if any(c.isalpha() for c in normalized_doc) else "OTR"
         else:
             mapped_tipo_id = "PA"
 
@@ -207,9 +184,12 @@ def extract_guest_data(guest, nationality_code, index):
         "nombre2": guest.findtext("ALTERNATE_FIRST_NAME", "").strip(),
         "sexo": guest.findtext("GENDER", "").strip(),
         "idpaisnacionalidad": nationality_code,
-        "idpaisresidencia": guest.findtext("GUEST_COUNTRY", "").strip(),
+
+        # ✅ FIXED: always use nationality_code
+        "idpaisresidencia": nationality_code,
+
         "fechaNacimiento": normalize_date(
-            guest.findtext("BIRTH_DATE", "").strip(), is_birth=True
+            guest.findtext("BIRTH_DATE", "").strip(), True
         ),
         "fechaEntrada": normalize_date(
             guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip()
@@ -230,12 +210,15 @@ def extract_guest_data(guest, nationality_code, index):
         errors.append(f"Invalid tipodocumento value: '{raw_tipo}'")
 
     if errors:
-        guest_name = f"{data.get('apellido1','')}, {data.get('nombre1','')}".strip()
-        return None, f"Entry #{index}: {guest_name or '[unknown]'} — " + "; ".join(errors)
+        guest_name = f"{data['apellido1']}, {data['nombre1']}".strip(", ")
+        return None, f"Entry #{index} (Room {data['habitacion']}): {guest_name or '[unknown]'} — " + "; ".join(errors)
 
     return [data[field] for field in FIELD_ORDER], None
 
 
+# ===============================
+# Output folder
+# ===============================
 def get_output_folder():
     if os.path.exists(CONFIG_FILENAME):
         with open(CONFIG_FILENAME, "r", encoding="utf-8") as f:
@@ -248,7 +231,6 @@ def get_output_folder():
         with open(CONFIG_FILENAME, "w", encoding="utf-8") as f:
             f.write(folder)
         return folder
-
     return None
 
 
@@ -264,7 +246,6 @@ def ask_all_or_select():
 
     popup = tk.Toplevel()
     popup.title("Conversion Mode")
-
     popup.protocol("WM_DELETE_WINDOW", lambda: choose(None))
 
     tk.Label(popup, text="Choose conversion mode:").pack(padx=20, pady=10)
@@ -277,7 +258,6 @@ def ask_all_or_select():
 
     popup.grab_set()
     popup.wait_window()
-
     return result["choice"]
 
 
@@ -320,9 +300,7 @@ def main():
         messagebox.showerror("XML Error", str(e))
         return
 
-    valid_rows = []
-    errors = []
-    index = 1
+    valid_rows, errors, index = [], [], 1
 
     for nat in root.findall(".//G_NATIONALITY"):
         nat_code = nat.findtext("NATIONALITY", "").strip()
@@ -336,10 +314,11 @@ def main():
 
             row, err = extract_guest_data(guest, nat_code, index)
             if row:
-                row[FIELD_ORDER.index("habitacion")] = row[-1].lstrip("0")
+                row[-1] = row[-1].lstrip("0")
                 valid_rows.append(row)
             else:
                 errors.append(err)
+
             index += 1
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
