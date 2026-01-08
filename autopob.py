@@ -6,6 +6,7 @@ import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import tkinter.simpledialog as simpledialog
+from tkinter import ttk
 import socket
 import json
 import base64
@@ -31,7 +32,6 @@ def get_app_path(filename):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(os.path.dirname(sys.executable), filename)
     return os.path.join(os.path.abspath("."), filename)
-
 
 def validate_license():
     license_path = get_app_path("license.lic")
@@ -66,10 +66,7 @@ def validate_license():
         messagebox.showerror("License Error", "License file is missing required fields.")
         return False
 
-    license_json = json.dumps(
-        license_info,
-        separators=(",", ":")
-    ).encode("utf-8")
+    license_json = json.dumps(license_info, separators=(",", ":")).encode("utf-8")
 
     try:
         signature = base64.b64decode(signature_b64)
@@ -123,6 +120,30 @@ def validate_license():
 
 
 # ===============================
+# UI Bootstrap (Icon + Style)
+# ===============================
+def set_app_icon(root):
+    try:
+        icon_path = get_resource_path("icon.ico")
+        root.iconbitmap(icon_path)
+    except Exception:
+        pass
+
+
+def configure_style():
+    style = ttk.Style()
+
+    if "vista" in style.theme_names():
+        style.theme_use("vista")
+    elif "clam" in style.theme_names():
+        style.theme_use("clam")
+
+    style.configure("TButton", padding=10, font=("Segoe UI", 10))
+    style.configure("TLabel", font=("Segoe UI", 10))
+    style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
+
+
+# ===============================
 # Constants
 # ===============================
 REQUIRED_FIELDS = [
@@ -151,12 +172,10 @@ def normalize_date(date_str, is_birth=False):
     try:
         day, month, year2 = date_str.split("-")
         yy = int(year2)
-
         yyyy = f"20{yy:02d}" if (not is_birth or yy <= 26) else f"19{yy:02d}"
         return f"{day}-{month}-{yyyy}"
     except Exception:
         return date_str
-
 
 def extract_guest_data(guest, nationality_code, index):
     q_id = guest.find(".//Q_ID")
@@ -184,19 +203,10 @@ def extract_guest_data(guest, nationality_code, index):
         "nombre2": guest.findtext("ALTERNATE_FIRST_NAME", "").strip(),
         "sexo": guest.findtext("GENDER", "").strip(),
         "idpaisnacionalidad": nationality_code,
-
-        # ✅ FIXED: always use nationality_code
         "idpaisresidencia": nationality_code,
-
-        "fechaNacimiento": normalize_date(
-            guest.findtext("BIRTH_DATE", "").strip(), True
-        ),
-        "fechaEntrada": normalize_date(
-            guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip()
-        ),
-        "fechaSalida": normalize_date(
-            guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "").strip()
-        ),
+        "fechaNacimiento": normalize_date(guest.findtext("BIRTH_DATE", "").strip(), True),
+        "fechaEntrada": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "").strip()),
+        "fechaSalida": normalize_date(guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "").strip()),
         "habitacion": guest.findtext("ROOM", "").strip(),
     }
 
@@ -214,6 +224,51 @@ def extract_guest_data(guest, nationality_code, index):
         return None, f"Entry #{index} (Room {data['habitacion']}): {guest_name or '[unknown]'} — " + "; ".join(errors)
 
     return [data[field] for field in FIELD_ORDER], None
+
+# ===============================
+# Mode Selector
+# ===============================
+def ask_all_or_select(root):
+    result = {"choice": None}
+
+    def choose(val):
+        result["choice"] = val
+        popup.destroy()
+
+    popup = tk.Toplevel(root)
+    popup.withdraw()
+
+    popup.title("Generate POB Report")
+    popup.resizable(False, False)
+    popup.protocol("WM_DELETE_WINDOW", lambda: choose(None))
+
+    try:
+        popup.iconbitmap(get_resource_path("icon.ico"))
+    except Exception:
+        pass
+
+    ttk.Label(
+        popup,
+        text="Choose Rooms",
+        style="Header.TLabel"
+    ).pack(padx=20, pady=(20, 10))
+
+    frame = ttk.Frame(popup)
+    frame.pack(padx=20, pady=10)
+
+    ttk.Button(frame, text="All rooms", command=lambda: choose("all")).grid(row=0, column=0, padx=5)
+    ttk.Button(frame, text="Specific rooms", command=lambda: choose("select")).grid(row=0, column=1, padx=5)
+
+    popup.transient(root)
+    popup.grab_set()
+
+    popup.update_idletasks()
+    center_window(popup)
+
+    popup.deiconify()
+
+    popup.wait_window()
+    return result["choice"]
 
 
 # ===============================
@@ -235,49 +290,26 @@ def get_output_folder():
 
 
 # ===============================
-# Mode Selector
-# ===============================
-def ask_all_or_select():
-    result = {"choice": None}
-
-    def choose(val):
-        result["choice"] = val
-        popup.destroy()
-
-    popup = tk.Toplevel()
-    popup.title("Conversion Mode")
-    popup.protocol("WM_DELETE_WINDOW", lambda: choose(None))
-
-    tk.Label(popup, text="Choose conversion mode:").pack(padx=20, pady=10)
-
-    frame = tk.Frame(popup)
-    frame.pack(pady=10)
-
-    tk.Button(frame, text="All", width=10, command=lambda: choose("all")).pack(side="left", padx=5)
-    tk.Button(frame, text="Select Rooms", width=15, command=lambda: choose("select")).pack(side="left", padx=5)
-
-    popup.grab_set()
-    popup.wait_window()
-    return result["choice"]
-
-
-# ===============================
 # Main
 # ===============================
 def main():
+    root = tk.Tk()
+    set_app_icon(root)
+    configure_style()
+    root.withdraw()
+
     if not validate_license():
         return
 
-    root = tk.Tk()
-    root.withdraw()
-
-    mode = ask_all_or_select()
+    mode = ask_all_or_select(root)
     if mode is None:
         return
 
     selected_rooms = None
     if mode == "select":
-        rooms = simpledialog.askstring("Select Rooms", "Enter room numbers separated by commas:")
+        rooms = simpledialog.askstring(
+            "Select Rooms", "Enter room numbers separated by commas:"
+        )
         if not rooms:
             return
         selected_rooms = ["0" + r.strip() for r in rooms.split(",") if r.strip().isdigit()]
@@ -295,14 +327,14 @@ def main():
 
     try:
         tree = ET.parse(xml_file)
-        root = tree.getroot()
+        root_xml = tree.getroot()
     except ET.ParseError as e:
         messagebox.showerror("XML Error", str(e))
         return
 
     valid_rows, errors, index = [], [], 1
 
-    for nat in root.findall(".//G_NATIONALITY"):
+    for nat in root_xml.findall(".//G_NATIONALITY"):
         nat_code = nat.findtext("NATIONALITY", "").strip()
         for guest in nat.findall(".//G_FIRST"):
             if guest.findtext("RESV_STATUS", "").strip().upper() != "CKIN":
