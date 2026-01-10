@@ -177,9 +177,21 @@ def extract_guest_data(guest, nationality_code, index):
         "habitacion": guest.findtext("ROOM", "").strip(),
     }
 
+    errors = []
+
     for field in REQUIRED_FIELDS:
         if not data[field]:
-            return None, f"Entry #{index}: Missing {field}"
+            errors.append(f"Missing {field}")
+
+    if raw_tipo and mapped_tipo_id is None:
+        errors.append(f"Invalid tipodocumento value: '{raw_tipo}'")
+
+    if errors:
+        guest_name = f"{data['apellido1']}, {data['nombre1']}".strip(", ")
+        return None, (
+            f"Entry #{index} (Room {data['habitacion']}): "
+            f"{guest_name or '[unknown]'} — " + "; ".join(errors)
+        )
 
     return [data[field] for field in FIELD_ORDER], None
 
@@ -360,6 +372,8 @@ def main():
             f.write("\n".join(errors))
         QMessageBox.warning(None, "Errors Found", f"See log:\n{log}")
     else:
+        rows.sort(key=lambda r: int(r[-1]) if r[-1].isdigit() else 0)
+        
         csv_path = os.path.join(output_folder, f"POB {timestamp}.csv")
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             csv.writer(f, delimiter=";").writerows(rows)
