@@ -1,21 +1,22 @@
 # AutoPOB
 
-AutoPOB is a purpose-built desktop application that automates the preparation of guest reporting data for Uruguay’s **POB (Policía de Hospedajes)** system.
+AutoPOB is a lightweight desktop application that automates the preparation of guest reporting data for Uruguay’s **POB (Población flotante de Habitaciones)** system.
 
-It processes **Opera Cloud XML reports**, applies reporting rules and data validation, and produces **POB-compliant CSV files** ready for bulk upload—eliminating repetitive manual entry while preserving existing hotel workflows.
+It ingests hotel reports (XML **and Excel** formats), applies reporting rules and extensive data validation, and outputs **POB‑compliant CSV files** ready for bulk upload. By integrating with existing property management workflows, it eliminates repetitive manual entry while safeguarding data integrity.
 
-The tool is designed for **Front Desk and Night Shift operations**, prioritizing reliability, clarity, and compliance over unnecessary complexity.
+The tool is intended for **Front Desk, Night Audit and management use**; reliability, transparency, and compliance are prioritized over feature bloat.
 
 ---
 
 ## Key Features
 
-- Converts Opera Cloud XML reports into POB-compatible CSV files  
-- Applies field validation and normalization based on official POB requirements  
-- Supports full-property or room-specific report generation  
-- Prevents common formatting and data-entry errors before upload  
-- Desktop-based, offline-first execution  
-- License validation to ensure controlled distribution  
+- Converts Opera Cloud XML reports (and exported Excel spreadsheets) into POB‑compatible CSV files
+- Built‑in validation for required fields, country codes, gender values, date normalization, etc.
+- Option to process all rooms or a user‑specified subset
+- Error logging with human‑readable, numbered reports when records fail validation
+- Remembers last input folder and lets user save default output directory via config files
+- License validation using RSA signatures; supports machine‑locked and BETA licenses
+- Desktop‑based, offline‑first execution with a PySide6 GUI
 
 ---
 
@@ -30,18 +31,18 @@ AutoPOB encodes domain-specific rules and safeguards that reflect real-world hot
 
 ## Technology Overview
 
-- Python 3  
-- Qt (PySide6) for the user interface  
-- XML parsing and structured CSV generation  
-- Cryptographic license validation  
-- Packaged as a single executable via PyInstaller  
+- Python 3.11+ (runs under a virtualenv or bundled executable)
+- PySide6 (Qt) user interface with custom styling
+- XML/Excel parsing via `xml.etree.ElementTree` and `pandas`
+- CSV output with configurable delimiter and sorted room numbers
+- RSA‑based license verification (public key stored as resource)
+- PyInstaller build script (`autopob.spec`) for single‑file distribution
 
 ---
 
 ## Status
 
-AutoPOB is actively used and maintained as a production tool.  
-Future updates focus on incremental improvements, stability, and usability—rather than feature expansion for its own sake.
+AutoPOB is actively used and maintained in production environments. Bug fixes, validation enhancements, and build/process improvements are the primary focus; new features are added only when they provide clear operational value.
 
 ---
 

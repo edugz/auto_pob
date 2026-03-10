@@ -270,7 +270,11 @@ def process_guest(g, index):
 # ==================================================
 
 def parse_xml(file):
-    """Parse guest data from XML file."""
+    """Parse guest data from XML file.
+
+    Handles both the classic Opera schema and variants where
+    ID_TYPE/ID_NUMBER live inside a nested <Q_ID> element.
+    """
 
     guests = []
 
@@ -278,34 +282,40 @@ def parse_xml(file):
     root = tree.getroot()
 
     for nat in root.findall(".//G_NATIONALITY"):
-
-        nat_code = nat.findtext("NATIONALITY","")
+        nat_code = nat.findtext("NATIONALITY", "")
 
         for guest in nat.findall(".//G_FIRST"):
+            # read identifiers from inner <Q_ID> if present
+            qid = guest.find(".//Q_ID")
+            if qid is not None:
+                id_type = qid.findtext("ID_TYPE", "")
+                id_number = qid.findtext("ID_NUMBER", "")
+            else:
+                id_type = guest.findtext("ID_TYPE", "")
+                id_number = guest.findtext("ID_NUMBER", "")
 
             guests.append({
+                "FIRST": guest.findtext("FIRST", ""),
+                "LAST": guest.findtext("LAST", ""),
 
-                "FIRST": guest.findtext("FIRST",""),
-                "LAST": guest.findtext("LAST",""),
+                "ALTERNATE_FIRST_NAME": guest.findtext("ALTERNATE_FIRST_NAME", ""),
+                "ALTERNATE_LAST_NAME": guest.findtext("ALTERNATE_LAST_NAME", ""),
 
-                "ALTERNATE_FIRST_NAME": guest.findtext("ALTERNATE_FIRST_NAME",""),
-                "ALTERNATE_LAST_NAME": guest.findtext("ALTERNATE_LAST_NAME",""),
+                "GENDER": guest.findtext("GENDER", ""),
 
-                "GENDER": guest.findtext("GENDER",""),
+                "BIRTH_DATE": guest.findtext("BIRTH_DATE", ""),
 
-                "BIRTH_DATE": guest.findtext("BIRTH_DATE",""),
+                "ROOM": guest.findtext("ROOM", ""),
 
-                "ROOM": guest.findtext("ROOM",""),
-
-                "ID_TYPE": guest.findtext("ID_TYPE",""),
-                "ID_NUMBER": guest.findtext("ID_NUMBER",""),
+                "ID_TYPE": id_type,
+                "ID_NUMBER": id_number,
 
                 "NATIONALITY": nat_code,
 
-                "ARRIVAL": guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_",""),
-                "DEPARTURE": guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM",""),
+                "ARRIVAL": guest.findtext("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", ""),
+                "DEPARTURE": guest.findtext("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", ""),
 
-                "RESV_STATUS": guest.findtext("RESV_STATUS","")
+                "RESV_STATUS": guest.findtext("RESV_STATUS", "")
             })
 
     return guests
@@ -319,30 +329,40 @@ def parse_xlsx(file):
     guests = []
 
     for _, r in df.iterrows():
+        # pull out identifiers and allow fallback to any column that
+        # mentions the field name (handles spreadsheets generated
+        # from the alternate XML schema).
+        id_type = str(r.get("ID_TYPE", "")).strip()
+        id_number = str(r.get("ID_NUMBER", "")).strip()
+        if not id_type or not id_number:
+            for col in r.index:
+                if not id_type and "ID_TYPE" in col:
+                    id_type = str(r[col]).strip()
+                if not id_number and "ID_NUMBER" in col:
+                    id_number = str(r[col]).strip()
 
         guests.append({
+            "FIRST": str(r.get("FIRST", "")).strip(),
+            "LAST": str(r.get("LAST", "")).strip(),
 
-            "FIRST": str(r.get("FIRST","")).strip(),
-            "LAST": str(r.get("LAST","")).strip(),
+            "ALTERNATE_FIRST_NAME": str(r.get("ALTERNATE_FIRST_NAME", "")).strip(),
+            "ALTERNATE_LAST_NAME": str(r.get("ALTERNATE_LAST_NAME", "")).strip(),
 
-            "ALTERNATE_FIRST_NAME": str(r.get("ALTERNATE_FIRST_NAME","")).strip(),
-            "ALTERNATE_LAST_NAME": str(r.get("ALTERNATE_LAST_NAME","")).strip(),
+            "GENDER": str(r.get("GENDER", "")).strip(),
 
-            "GENDER": str(r.get("GENDER","")).strip(),
+            "BIRTH_DATE": str(r.get("BIRTH_DATE", "")).strip(),
 
-            "BIRTH_DATE": str(r.get("BIRTH_DATE","")).strip(),
+            "ROOM": str(r.get("ROOM", "")).strip(),
 
-            "ROOM": str(r.get("ROOM","")).strip(),
+            "ID_TYPE": id_type,
+            "ID_NUMBER": id_number,
 
-            "ID_TYPE": str(r.get("ID_TYPE","")).strip(),
-            "ID_NUMBER": str(r.get("ID_NUMBER","")).strip(),
+            "NATIONALITY": str(r.get("NATIONALITY", "")).strip(),
 
-            "NATIONALITY": str(r.get("NATIONALITY","")).strip(),
+            "ARRIVAL": str(r.get("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_", "")).strip(),
+            "DEPARTURE": str(r.get("TO_CHAR_RGV_TRUNC_DEPARTURE_PM", "")).strip(),
 
-            "ARRIVAL": str(r.get("TO_CHAR_RGV_TRUNC_ARRIVAL_PMS_","")).strip(),
-            "DEPARTURE": str(r.get("TO_CHAR_RGV_TRUNC_DEPARTURE_PM","")).strip(),
-
-            "RESV_STATUS": str(r.get("RESV_STATUS","")).strip()
+            "RESV_STATUS": str(r.get("RESV_STATUS", "")).strip()
 
         })
 
