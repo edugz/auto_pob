@@ -25,7 +25,7 @@ import pandas as pd
 from PySide6.QtWidgets import (
     QApplication, QDialog, QLabel, QPushButton,
     QHBoxLayout, QVBoxLayout, QFileDialog,
-    QMessageBox, QInputDialog
+    QMessageBox, QInputDialog, QLineEdit, QCheckBox
 )
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
@@ -464,6 +464,40 @@ class ModeDialog(QDialog):
         self.accept()
 
 
+class RoomSelectionDialog(QDialog):
+    """Dialog to enter rooms and choose include/exclude."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Rooms")
+        self.setModal(True)
+        self.setFixedSize(400, 140)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("Enter room numbers separated by commas:"))
+        self.line_edit = QLineEdit()
+        layout.addWidget(self.line_edit)
+
+        self.exclude_box = QCheckBox("Exclude chosen room(s)")
+        layout.addWidget(self.exclude_box)
+        # when the checkbox is toggled, return focus to the entry field
+        self.exclude_box.toggled.connect(lambda _: self.line_edit.setFocus())
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        ok_btn = QPushButton("OK")
+        cancel_btn = QPushButton("Cancel")
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+
+        ok_btn.clicked.connect(self.accept)
+        cancel_btn.clicked.connect(self.reject)
+
+    def get_values(self):
+        return self.line_edit.text(), self.exclude_box.isChecked()
+
+
 # ==================================================
 # Main Application Logic
 # ==================================================
@@ -489,19 +523,17 @@ def main():
         sys.exit(0)
 
     selected_rooms = None
+    exclude_rooms = False
 
     if dlg.choice == "select":
-
-        text, ok = QInputDialog.getText(
-            None,
-            "Select Rooms",
-            "Enter room numbers separated by commas:"
-        )
-
-        if not ok or not text:
+        # custom dialog with checkbox
+        room_dlg = RoomSelectionDialog()
+        if room_dlg.exec() != QDialog.Accepted:
             sys.exit(0)
-
-        selected_rooms = ["0"+r.strip() for r in text.split(",") if r.strip().isdigit()]
+        text, exclude_rooms = room_dlg.get_values()
+        if not text:
+            sys.exit(0)
+        selected_rooms = ["0" + r.strip() for r in text.split(",") if r.strip().isdigit()]
 
     start_dir=""
 
@@ -549,8 +581,13 @@ def main():
 
         room=g["ROOM"]
 
-        if selected_rooms and room not in selected_rooms:
-            continue
+        if selected_rooms:
+            if exclude_rooms:
+                if room in selected_rooms:
+                    continue
+            else:
+                if room not in selected_rooms:
+                    continue
 
         row,err=process_guest(g,idx)
 

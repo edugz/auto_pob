@@ -12,7 +12,7 @@ The tool is intended for **Front Desk, Night Audit and management use**; reliabi
 
 - Converts Opera Cloud XML reports (and exported Excel spreadsheets) into POB‑compatible CSV files
 - Built‑in validation for required fields, country codes, gender values, date normalization, etc.
-- Option to process all rooms or a user‑specified subset
+- Option to process all rooms, a user‑specified subset, or _exclude_ a list of rooms via checkbox
 - Error logging with human‑readable, numbered reports when records fail validation
 - Remembers last input folder and lets user save default output directory via config files
 - License validation using RSA signatures; supports machine‑locked and BETA licenses
